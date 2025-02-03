@@ -25,7 +25,6 @@ def create_llm(api_key):
     )
 
 def parse_scenes(raw_output):
-    """生成されたシーンをメインアイデアと詳細アイデアに分解"""
     scene_structure = {}
     current_main = None
     
@@ -44,7 +43,6 @@ def parse_scenes(raw_output):
         return {}
 
 def display_scene_selection():
-    """シーン選択UIの表示"""
     selected_scenes = []
     
     for main_idea, sub_ideas in st.session_state.scene_structure.items():
@@ -60,23 +58,17 @@ def display_scene_selection():
     return selected_scenes
 
 def generate_scenes(llm, situation, system_prompt):
-    """シーンの生成"""
-    scene_prompt = ChatPromptTemplate.from_messages([
+    chain = LLMChain(llm=llm, prompt=ChatPromptTemplate.from_messages([
         ("system", system_prompt),
-        ("user", f"以下の状況で出会いのシーンを生成してください：\n{situation}")
-    ])
-    
-    chain = LLMChain(llm=llm, prompt=scene_prompt)
+        ("user", situation)
+    ]))
     return chain.run(situation=situation)
 
 def generate_script(llm, scene, system_prompt):
-    """台本の生成"""
-    script_prompt = ChatPromptTemplate.from_messages([
+    chain = LLMChain(llm=llm, prompt=ChatPromptTemplate.from_messages([
         ("system", system_prompt),
-        ("user", f"以下のシーンを台本形式で書いてください：\n{scene}")
-    ])
-    
-    chain = LLMChain(llm=llm, prompt=script_prompt)
+        ("user", scene)
+    ]))
     return chain.run(scene=scene)
 
 def main():
@@ -84,7 +76,6 @@ def main():
     
     st.title("出会いシーン生成アプリ")
     
-    # サイドバーの設定
     with st.sidebar:
         st.header("設定")
         api_key = st.text_input("Anthropic APIキーを入力してください:", type="password")
@@ -110,10 +101,8 @@ def main():
         st.warning("サイドバーでAPIキーを入力してください")
         return
     
-    # タブの作成
     tab1, tab2, tab3 = st.tabs(["シーン生成", "シーン選択", "台本出力"])
     
-    # タブ1: シーン生成
     with tab1:
         st.header("シーン生成")
         situation = st.text_area("シチュエーションを入力してください:", height=100)
@@ -126,7 +115,6 @@ def main():
                     st.session_state.scene_structure = parse_scenes(raw_scenes)
                     st.success("シーンが生成されました！")
                     
-                    # 生成されたシーンの表示
                     for main_idea, sub_ideas in st.session_state.scene_structure.items():
                         with st.expander(main_idea, expanded=True):
                             for i, sub_idea in enumerate(sub_ideas, 1):
@@ -134,7 +122,6 @@ def main():
                 except Exception as e:
                     st.error(f"エラーが発生しました: {str(e)}")
     
-    # タブ2: シーン選択
     with tab2:
         st.header("シーン選択")
         if st.session_state.scene_structure:
@@ -163,7 +150,6 @@ def main():
         else:
             st.info("先にシーンを生成してください。")
     
-    # タブ3: 台本出力
     with tab3:
         st.header("生成された台本")
         if st.session_state.generated_scripts:
