@@ -114,12 +114,22 @@ def generate_scenes(llm, situation, system_prompt):
     ]))
     return chain.run(situation=situation)
 
-def generate_script(llm, scene, system_prompt):
+def generate_script(llm, scene_info, system_prompt):
+    """台本の生成"""
+    # シーンの文脈情報を含むプロンプトを作成
+    context_prompt = f"""メインシチュエーション：
+{scene_info['main_idea']}
+
+選択されたシーン：
+{scene_info['sub_idea']}
+
+上記のシーン設定に基づいて台本を生成してください。"""
+    
     chain = LLMChain(llm=llm, prompt=ChatPromptTemplate.from_messages([
         ("system", system_prompt),
-        ("user", scene)
+        ("user", context_prompt)
     ]))
-    return chain.run(scene=scene)
+    return chain.run(scene=context_prompt)
 
 def main():
     init_session_state()
@@ -180,7 +190,9 @@ def main():
             if st.session_state.selected_scenes:
                 st.write("### 選択されたシーン:")
                 for scene in st.session_state.selected_scenes:
-                    st.write(f"- {scene['sub_idea']}")
+                    st.write(f"メインアイデア: {scene['main_idea']}")
+                    st.write(f"選択シーン: {scene['sub_idea']}")
+                    st.write("---")
                 
                 if st.button("選択したシーンの台本を生成", type="primary"):
                     with st.spinner("台本を生成中..."):
@@ -188,7 +200,7 @@ def main():
                             llm = create_llm(api_key)
                             st.session_state.generated_scripts = []
                             for scene_info in st.session_state.selected_scenes:
-                                script = generate_script(llm, scene_info['sub_idea'], script_system_prompt)
+                                script = generate_script(llm, scene_info, script_system_prompt)
                                 st.session_state.generated_scripts.append({
                                     'main_idea': scene_info['main_idea'],
                                     'sub_idea': scene_info['sub_idea'],
