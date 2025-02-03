@@ -37,21 +37,38 @@ def parse_scenes(raw_output):
             if not line:
                 continue
                 
-            if line.startswith('■'):
+            # メインアイデアの検出を改善
+            if '■' in line:
                 # 新しいメインアイデアの開始
                 if current_main and sub_ideas:
                     # 前のメインアイデアのサブアイデアを保存
-                    scene_structure[current_main] = sub_ideas[:10]  # 最大10個まで
+                    scene_structure[current_main] = sub_ideas
+                # メインアイデアから余分な文字を削除
                 current_main = line.strip()
                 sub_ideas = []
-            elif current_main and line and not line.startswith('【') and not line.startswith('---'):
-                # サブアイデアの追加（直接展開と継続展開は除外）
-                if not any(marker in line for marker in ['直接展開', '継続展開', '展開例']):
-                    sub_ideas.append(line.strip())
+            # サブアイデアの検出を改善
+            elif current_main and line:
+                # 数字で始まる行、または特定のマーカーがない行をサブアイデアとして扱う
+                if (line[0].isdigit() or not any(marker in line.lower() for marker in 
+                    ['直接展開', '継続展開', '展開例', '【', '---', '###', 'バッチ'])):
+                    # 数字とドットを削除してクリーンアップ
+                    cleaned_line = line
+                    if line[0].isdigit():
+                        cleaned_line = '.'.join(line.split('.')[1:]).strip()
+                    sub_ideas.append(cleaned_line)
         
         # 最後のメインアイデアのサブアイデアを保存
         if current_main and sub_ideas:
-            scene_structure[current_main] = sub_ideas[:10]  # 最大10個まで
+            scene_structure[current_main] = sub_ideas
+        
+        # 各メインアイデアに対して10個のサブアイデアを確保
+        for main_idea in scene_structure:
+            if len(scene_structure[main_idea]) > 10:
+                scene_structure[main_idea] = scene_structure[main_idea][:10]
+            
+        # メインアイデアが10個未満の場合のエラーチェック
+        if len(scene_structure) < 10:
+            st.warning(f"メインアイデアが{len(scene_structure)}個しか生成されませんでした。10個必要です。")
             
         return scene_structure
     except Exception as e:
