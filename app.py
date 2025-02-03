@@ -25,18 +25,34 @@ def create_llm(api_key):
     )
 
 def parse_scenes(raw_output):
+    """生成されたシーンをメインアイデアと詳細アイデアに分解"""
     scene_structure = {}
     current_main = None
+    sub_ideas = []
     
     try:
         lines = raw_output.split('\n')
         for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
             if line.startswith('■'):
+                # 新しいメインアイデアの開始
+                if current_main and sub_ideas:
+                    # 前のメインアイデアのサブアイデアを保存
+                    scene_structure[current_main] = sub_ideas[:10]  # 最大10個まで
                 current_main = line.strip()
-                scene_structure[current_main] = []
-            elif current_main and line.strip() and not line.startswith('■'):
-                cleaned_line = ' '.join(line.split()[1:]) if line.split()[0].isdigit() else line
-                scene_structure[current_main].append(cleaned_line.strip())
+                sub_ideas = []
+            elif current_main and line and not line.startswith('【') and not line.startswith('---'):
+                # サブアイデアの追加（直接展開と継続展開は除外）
+                if not any(marker in line for marker in ['直接展開', '継続展開', '展開例']):
+                    sub_ideas.append(line.strip())
+        
+        # 最後のメインアイデアのサブアイデアを保存
+        if current_main and sub_ideas:
+            scene_structure[current_main] = sub_ideas[:10]  # 最大10個まで
+            
         return scene_structure
     except Exception as e:
         st.error(f"シーンの解析中にエラーが発生しました: {str(e)}")
