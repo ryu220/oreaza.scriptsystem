@@ -37,39 +37,32 @@ def parse_scenes(raw_output):
             if not line:
                 continue
                 
-            # メインアイデアの検出を改善
             if '■' in line:
-                # 新しいメインアイデアの開始
                 if current_main and sub_ideas:
-                    # 前のメインアイデアのサブアイデアを保存
+                    # サブアイデアが10個未満の場合、警告を表示
+                    if len(sub_ideas) < 10:
+                        st.warning(f"{current_main}のサブアイデアが{len(sub_ideas)}個しかありません。10個必要です。")
                     scene_structure[current_main] = sub_ideas
-                # メインアイデアから余分な文字を削除
                 current_main = line.strip()
                 sub_ideas = []
-            # サブアイデアの検出を改善
             elif current_main and line:
-                # 数字で始まる行、または特定のマーカーがない行をサブアイデアとして扱う
-                if (line[0].isdigit() or not any(marker in line.lower() for marker in 
-                    ['直接展開', '継続展開', '展開例', '【', '---', '###', 'バッチ'])):
-                    # 数字とドットを削除してクリーンアップ
-                    cleaned_line = line
-                    if line[0].isdigit():
-                        cleaned_line = '.'.join(line.split('.')[1:]).strip()
-                    sub_ideas.append(cleaned_line)
+                # 数字で始まる行のみをサブアイデアとして扱う
+                if line[0].isdigit():
+                    # 番号を除去してクリーンアップ
+                    cleaned_line = '.'.join(line.split('.')[1:]).strip()
+                    if cleaned_line:  # 空文字列でない場合のみ追加
+                        sub_ideas.append(cleaned_line)
         
         # 最後のメインアイデアのサブアイデアを保存
         if current_main and sub_ideas:
+            if len(sub_ideas) < 10:
+                st.warning(f"{current_main}のサブアイデアが{len(sub_ideas)}個しかありません。10個必要です。")
             scene_structure[current_main] = sub_ideas
         
-        # 各メインアイデアに対して10個のサブアイデアを確保
-        for main_idea in scene_structure:
-            if len(scene_structure[main_idea]) > 10:
-                scene_structure[main_idea] = scene_structure[main_idea][:10]
-            
-        # メインアイデアが10個未満の場合のエラーチェック
+        # メインアイデアの数をチェック
         if len(scene_structure) < 10:
             st.warning(f"メインアイデアが{len(scene_structure)}個しか生成されませんでした。10個必要です。")
-            
+        
         return scene_structure
     except Exception as e:
         st.error(f"シーンの解析中にエラーが発生しました: {str(e)}")
@@ -91,9 +84,33 @@ def display_scene_selection():
     return selected_scenes
 
 def generate_scenes(llm, situation, system_prompt):
+    """シーンの生成"""
+    # ユーザープロンプトを修正して、明示的に10個のサブアイデアを要求
+    user_prompt = f"""以下の状況で出会いのシーンを生成してください：
+{situation}
+
+各メインアイデアに対して、必ず10個の異なるサブアイデアを生成してください。
+展開例は別途生成するので、ここではサブアイデアのみを出力してください。
+
+出力形式：
+■ メインアイデア1
+1. サブアイデア1
+2. サブアイデア2
+...
+10. サブアイデア10
+
+■ メインアイデア2
+1. サブアイデア1
+2. サブアイデア2
+...
+10. サブアイデア10
+
+（以下同様に10個のメインアイデアまで）
+"""
+    
     chain = LLMChain(llm=llm, prompt=ChatPromptTemplate.from_messages([
         ("system", system_prompt),
-        ("user", situation)
+        ("user", user_prompt)
     ]))
     return chain.run(situation=situation)
 
