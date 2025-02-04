@@ -116,20 +116,27 @@ def generate_scenes(llm, situation, system_prompt):
 
 def generate_script(llm, scene_info, system_prompt):
     """台本の生成"""
-    # シーンの文脈情報を含むプロンプトを作成
-    context_prompt = f"""メインシチュエーション：
+    try:
+        # シーンの文脈情報を含むプロンプトを作成（UTF-8でエンコード）
+        context_prompt = f"""メインシチュエーション：
 {scene_info['main_idea']}
 
 選択されたシーン：
 {scene_info['sub_idea']}
 
-上記のシーン設定に基づいて台本を生成してください。"""
-    
-    chain = LLMChain(llm=llm, prompt=ChatPromptTemplate.from_messages([
-        ("system", system_prompt),
-        ("user", context_prompt)
-    ]))
-    return chain.run(scene=context_prompt)
+上記のシーン設定に基づいて台本を生成してください。""".encode('utf-8').decode('utf-8')
+        
+        chain = LLMChain(llm=llm, prompt=ChatPromptTemplate.from_messages([
+            ("system", system_prompt),
+            ("user", context_prompt)
+        ]))
+        return chain.run(scene=context_prompt)
+    except UnicodeEncodeError as e:
+        st.error(f"文字エンコーディングエラー: {str(e)}")
+        return ""
+    except Exception as e:
+        st.error(f"エラーが発生しました: {str(e)}")
+        return ""
 
 def main():
     init_session_state()
