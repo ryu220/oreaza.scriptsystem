@@ -19,7 +19,7 @@ def init_session_state():
 def create_llm(api_key):
     return ChatAnthropic(
         anthropic_api_key=api_key,
-        model="claude-3-5-sonnet-20241022",
+        model="claude-3-7-sonnet-20250219",
         temperature=0.7,
         max_tokens=4000
     )
